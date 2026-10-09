@@ -168,10 +168,10 @@ async def set_shop_status(interaction: discord.Interaction, state: app_commands.
         return
     await interaction.response.defer(ephemeral=True)
     if state.value == "OPEN":
-        await ch.edit(name="🔒 JT SHOP 🟢OPEN")
+        await ch.edit(name="🔒 dee＆xern商城 🟢OPEN")
         await interaction.followup.send("✅ 招牌已成功修改为 OPEN！")
     else:
-        await ch.edit(name="🔒 JT SHOP 🔴CLOSE")
+        await ch.edit(name="🔒 dee＆xern商城 🔴CLOSE")
         await interaction.followup.send("✅ 招牌已成功修改为 CLOSE！")
 
 @bot.tree.command(name="set_welcome", description="🛠️ 设置新成员的欢迎通知频道")
