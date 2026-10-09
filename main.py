@@ -19,7 +19,7 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 DB_NAME = "shop_helper.db"
 
 # ⚠️ 请在这里换上你的两个频道 ID
-STATUS_CHANNEL_ID = 123456789012345678  
+STATUS_CHANNEL_ID = 1558161595996315779
 MEMBER_COUNT_CHANNEL_ID = 876543210987654321  
 
 async def update_member_count(guild):
