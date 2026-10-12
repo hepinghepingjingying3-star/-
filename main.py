@@ -10,15 +10,15 @@ from threading import Thread
 
 app = Flask('')
 @app.route('/')
-def home(): return "OK"
+def home(): return "DEE & XERN ONLINE"
 def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 DB_NAME = "shop_helper.db"
 
 # ⚠️ 请在此处换上你真实的锁头分类/频道 ID
-STATUS_CHANNEL_ID = 123456789012345678  
-MEMBER_COUNT_CHANNEL_ID = 876543210987654321  
+STATUS_CHANNEL_ID = 1559166686978904134 
+MEMBER_COUNT_CHANNEL_ID = 1559167209388113990  
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
@@ -38,7 +38,7 @@ async def update_member_count(guild):
 @bot.event
 async def on_ready():
     await init_db()
-    print("Online")
+    print("🚀 BOT READY")
     try: await bot.tree.sync()
     except: pass
 
@@ -46,6 +46,7 @@ async def on_ready():
 async def on_member_join(member: discord.Member): await update_member_count(member.guild)
 @bot.event
 async def on_member_remove(member: discord.Member): await update_member_count(member.guild)
+
 class GiveawayJoinView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="🎉 参与抽奖", style=discord.ButtonStyle.success, custom_id="join_giveaway_btn")
@@ -64,7 +65,6 @@ class GiveawayJoinView(discord.ui.View):
                 await interaction.followup.send("✅ 成功参与抽奖！祝您好运连连！", ephemeral=True)
             except:
                 await interaction.followup.send("⚠️ 您已经参与过本次抽奖，请勿重复点击！", ephemeral=True)
-
 async def draw_giveaway_winners(msg_id, interaction_or_guild):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT prize_name, prize_type, prize_value, winners_count FROM giveaways WHERE msg_id = ?", (msg_id,)) as cur:
@@ -73,7 +73,7 @@ async def draw_giveaway_winners(msg_id, interaction_or_guild):
             prize_name, prize_type, prize_value, winners_count = g
         async with db.execute("SELECT user_id FROM giveaway_participants WHERE msg_id = ?", (msg_id,)) as cur:
             rows = await cur.fetchall()
-            participants = [r[0] for r in rows]
+            participants = [r for r in rows]
         if not participants: return "❌ 没有足够的参与者，无法开奖！"
         winners = random.sample(participants, min(winners_count, len(participants)))
         guild = interaction_or_guild.guild if hasattr(interaction_or_guild, 'guild') else interaction_or_guild
@@ -95,6 +95,7 @@ async def draw_giveaway_winners(msg_id, interaction_or_guild):
             await db.execute("UPDATE giveaways SET status = 'CLOSED' WHERE msg_id = ?", (msg_id,))
             await db.commit()
         return winner_mentions, prize_name
+
 @bot.tree.command(name="抽奖建立", description="🎁 [管理员] 建立一个自动派奖的抽奖活动")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.choices(奖品类型=[
@@ -147,6 +148,7 @@ async def delete_giveaway(interaction: discord.Interaction, 抽奖消息id: str)
         await msg.delete()
     except: pass
     await interaction.response.send_message("🗑️ 抽奖已被彻底删除！", ephemeral=True)
+
 class ShopDropdown(discord.ui.Select):
     def __init__(self):
         options = [
@@ -274,4 +276,3 @@ async def admin_add_balance(interaction: discord.Interaction, 目标成员: disc
     await interaction.response.send_message(f"✅ 成功为 {目标成员.mention} 充值 `￥{储值金额}` 并赠送 `{pts}` 积分！", ephemeral=True)
 
 Thread(target=run_flask).start()
-bot.run(os.environ.get('DISCORD_TOKEN'))
