@@ -10,7 +10,7 @@ from threading import Thread
 
 app = Flask('')
 @app.route('/')
-def home(): return "DEE & XERN ONLINE"
+def home(): return "DEE & XERN PRODUCTION RUNNING"
 def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
@@ -38,7 +38,7 @@ async def update_member_count(guild):
 @bot.event
 async def on_ready():
     await init_db()
-    print("🚀 BOT READY")
+    print("🚀 BOT PRODUCTION ONLINE")
     try: await bot.tree.sync()
     except: pass
 
@@ -56,7 +56,7 @@ class GiveawayJoinView(discord.ui.View):
         async with aiosqlite.connect(DB_NAME) as db:
             async with db.execute("SELECT status FROM giveaways WHERE msg_id = ?", (msg_id,)) as cur:
                 g = await cur.fetchone()
-                if not g or g[0] != 'OPEN':
+                if not g or g != 'OPEN':
                     await interaction.followup.send("❌ 该抽奖活动已经结束或已被删除！", ephemeral=True)
                     return
             try:
@@ -65,6 +65,7 @@ class GiveawayJoinView(discord.ui.View):
                 await interaction.followup.send("✅ 成功参与抽奖！祝您好运连连！", ephemeral=True)
             except:
                 await interaction.followup.send("⚠️ 您已经参与过本次抽奖，请勿重复点击！", ephemeral=True)
+
 async def draw_giveaway_winners(msg_id, interaction_or_guild):
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT prize_name, prize_type, prize_value, winners_count FROM giveaways WHERE msg_id = ?", (msg_id,)) as cur:
@@ -110,7 +111,6 @@ async def create_giveaway(interaction: discord.Interaction, 奖品名称: str, �
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("INSERT INTO giveaways (msg_id, prize_name, prize_type, prize_value, winners_count) VALUES (?, ?, ?, ?, ?)", (str(msg.id), 奖品名称, 奖品类型.value, str(奖品价值), 中奖人数))
         await db.commit()
-
 @bot.tree.command(name="抽奖结束", description="🔒 [管理员] 立即开奖并结束指定的抽奖")
 @app_commands.checks.has_permissions(administrator=True)
 async def end_giveaway(interaction: discord.Interaction, 抽奖消息id: str):
@@ -119,7 +119,7 @@ async def end_giveaway(interaction: discord.Interaction, 抽奖消息id: str):
     if isinstance(res, str): await interaction.followup.send(res)
     elif res:
         mentions, p_name = res
-        await interaction.channel.send(f"🎉 抽奖结果揭晓！恭喜：{', '.join(mentions)} 获得 **{p_name}**！奖品已到账！")
+        await interaction.channel.send(f"🎉 恭喜：{', '.join(mentions)} 获得 **{p_name}**！奖品已到账！")
         await interaction.followup.send("✅ 已成功强制开奖！")
 
 @bot.tree.command(name="抽奖重新抽", description="🔄 [管理员] 重新抽取幸运中奖者")
@@ -158,12 +158,11 @@ class ShopDropdown(discord.ui.Select):
         ]
         super().__init__(placeholder="❓ 请选择您需要办理的业务分类", min_values=1, max_values=1, options=options)
     async def callback(self, interaction: discord.Interaction):
+        # ⚡ 终极修复：开单弹窗严禁使用 defer，直接原装唤起，彻底解决底层二次响应死锁红字！
         await interaction.response.send_modal(OrderModal(self.values))
 
 class ShopMainView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None); self.add_item(ShopDropdown())
-
+    def __init__(self): super().__init__(timeout=None); self.add_item(ShopDropdown())
 class OrderModal(discord.ui.Modal, title="📝 填写代充/代购服务单"):
     item = discord.ui.TextInput(label="代充的物品 / 代购的商品名称", placeholder="例如: 某某游戏点券...")
     remarks = discord.ui.TextInput(label="具体账号信息 / 商品链接与要求", style=discord.TextStyle.long, placeholder="请在此填写账号、密码、区服...")
@@ -263,7 +262,7 @@ async def admin_check_user(interaction: discord.Interaction, 目标成员: disco
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT balance, points FROM users WHERE user_id = ?", (str(目标成员.id),)) as cur:
             row = await cur.fetchone()
-            bal, pts = (row, row) if row else (0.0, 0)
+            bal, pts = (row[0], row[1]) if row else (0.0, 0)
     await interaction.response.send_message(f"👤 账户：{目标成员.mention}\n💰 余额：`￥{bal}`\n✨ 积分：`{pts}`", ephemeral=True)
 
 @bot.tree.command(name="管理充值", description="🛠️ [管理员] 后台充值并等额赠送积分")
@@ -276,3 +275,4 @@ async def admin_add_balance(interaction: discord.Interaction, 目标成员: disc
     await interaction.response.send_message(f"✅ 成功为 {目标成员.mention} 充值 `￥{储值金额}` 并赠送 `{pts}` 积分！", ephemeral=True)
 
 Thread(target=run_flask).start()
+bot.run(os.environ.get('DISCORD_TOKEN'))
