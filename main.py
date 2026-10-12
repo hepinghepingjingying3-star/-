@@ -10,15 +10,16 @@ from threading import Thread
 
 app = Flask('')
 @app.route('/')
-def home(): return "DEE & XERN PRODUCTION RUNNING"
+def home(): return "DEE & XERN PRODUCTION"
 def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 DB_NAME = "shop_helper.db"
 
 # ⚠️ 请在此处换上你真实的锁头分类/频道 ID
-STATUS_CHANNEL_ID = 123456789012345678  
-MEMBER_COUNT_CHANNEL_ID = 876543210987654321  
+STATUS_CHANNEL_ID = 1559166686978904134  
+MEMBER_COUNT_CHANNEL_ID = 1559167209388113990  
+ADMIN_LOG_CHANNEL_ID = 1559195948348084245
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
@@ -38,7 +39,7 @@ async def update_member_count(guild):
 @bot.event
 async def on_ready():
     await init_db()
-    print("🚀 BOT PRODUCTION ONLINE")
+    print("🚀 DEE & XERN CORE ONLINE")
     try: await bot.tree.sync()
     except: pass
 
@@ -47,6 +48,20 @@ async def on_member_join(member: discord.Member): await update_member_count(memb
 @bot.event
 async def on_member_remove(member: discord.Member): await update_member_count(member.guild)
 
+# ==================== 🛡️ 核心高阶管理：24小时踢人监控安全锁 ====================
+@bot.event
+async def on_audit_log_entry_create(entry):
+    if entry.action in [discord.AuditLogAction.kick, discord.AuditLogAction.ban]:
+        guild = entry.guild
+        log_ch = guild.get_channel(ADMIN_LOG_CHANNEL_ID)
+        if log_ch:
+            action_name = "踢出 (Kick)" if entry.action == discord.AuditLogAction.kick else "封禁 (Ban)"
+            embed = discord.Embed(title="⚠️ 紧急安全高阶日志", color=discord.Color.red())
+            embed.add_field(name="👤 执行操作店员", value=entry.user.mention, inline=True)
+            embed.add_field(name="👢 受影响成员", value=f"`{entry.target}`", inline=True)
+            embed.add_field(name="⚙️ 行为类别", value=action_name, inline=True)
+            embed.add_field(name="💬 填写理由", value=f"`{entry.reason}`", inline=False)
+            await log_ch.send(embed=embed)
 class GiveawayJoinView(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="🎉 参与抽奖", style=discord.ButtonStyle.success, custom_id="join_giveaway_btn")
@@ -56,7 +71,7 @@ class GiveawayJoinView(discord.ui.View):
         async with aiosqlite.connect(DB_NAME) as db:
             async with db.execute("SELECT status FROM giveaways WHERE msg_id = ?", (msg_id,)) as cur:
                 g = await cur.fetchone()
-                if not g or g != 'OPEN':
+                if not g or g[0] != 'OPEN':
                     await interaction.followup.send("❌ 该抽奖活动已经结束或已被删除！", ephemeral=True)
                     return
             try:
@@ -74,7 +89,7 @@ async def draw_giveaway_winners(msg_id, interaction_or_guild):
             prize_name, prize_type, prize_value, winners_count = g
         async with db.execute("SELECT user_id FROM giveaway_participants WHERE msg_id = ?", (msg_id,)) as cur:
             rows = await cur.fetchall()
-            participants = [r for r in rows]
+            participants = [r[0] for r in rows]
         if not participants: return "❌ 没有足够的参与者，无法开奖！"
         winners = random.sample(participants, min(winners_count, len(participants)))
         guild = interaction_or_guild.guild if hasattr(interaction_or_guild, 'guild') else interaction_or_guild
@@ -158,7 +173,6 @@ class ShopDropdown(discord.ui.Select):
         ]
         super().__init__(placeholder="❓ 请选择您需要办理的业务分类", min_values=1, max_values=1, options=options)
     async def callback(self, interaction: discord.Interaction):
-        # ⚡ 终极修复：开单弹窗严禁使用 defer，直接原装唤起，彻底解决底层二次响应死锁红字！
         await interaction.response.send_modal(OrderModal(self.values))
 
 class ShopMainView(discord.ui.View):
